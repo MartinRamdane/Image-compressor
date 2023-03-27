@@ -67,13 +67,15 @@ distance :: (Int, Int, Int) -> (Int, Int, Int) -> Double
 distance (r1, g1, b1) (r2, g2, b2) =
   sqrt $ fromIntegral ((r1 - r2)^2 + (g1 - g2)^2 + (b1 - b2)^2)
 
-updateCentroids :: [(Int, Int, Int)] -> [Int] -> [(Int, Int, Int)] -> Int -> [(Int, Int, Int)]
+updateCentroids :: [(Int, Int, Int)] -> [Int] ->
+  [(Int, Int, Int)] -> Int -> [(Int, Int, Int)]
 updateCentroids [] _ _ _ = []
 updateCentroids [_] indexes colorList i =
   [(averageR points, averageG points, averageB points)]
   where points = getPointsFromCentroid colorList indexes i
 updateCentroids (_:xs) indexes colorList i =
-  (averageR points, averageG points, averageB points) : updateCentroids xs indexes colorList (i + 1)
+  (averageR points, averageG points, averageB points)
+  : updateCentroids xs indexes colorList (i + 1)
   where points = getPointsFromCentroid colorList indexes i
 
 getPointsFromCentroid :: [(Int, Int, Int)] -> [Int] -> Int -> [(Int, Int, Int)]
@@ -103,10 +105,12 @@ kMeans :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> [Int] -> Double -> [Int]
 kMeans centroids colorList indexes limit =
   if (calculateDistanceBetweenCentroids centroids updatedCentroids) < limit
     then indexes
-  else kMeans updatedCentroids colorList (assignPointsToCentroids colorList updatedCentroids) limit
+  else kMeans updatedCentroids colorList
+  (assignPointsToCentroids colorList updatedCentroids) limit
   where updatedCentroids = updateCentroids centroids indexes colorList 0
 
-calculateDistanceBetweenCentroids :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> Double
+calculateDistanceBetweenCentroids :: [(Int, Int, Int)] ->
+  [(Int, Int, Int)] -> Double
 calculateDistanceBetweenCentroids [] _ = 0
 calculateDistanceBetweenCentroids _ [] = 0
 calculateDistanceBetweenCentroids [x] [y] = distance x y
@@ -117,38 +121,37 @@ finalPrint :: [(Int, Int, Int)] -> [Int] -> [PixelData] -> Int -> IO ()
 finalPrint [] _  _ _ = return ()
 finalPrint _ []  _ _ = return ()
 finalPrint _ _  [] _ = return ()
-finalPrint [x] indexes colorList i = do
+finalPrint [x] indexes colorList i =
   putStrLn "--"
-  print x
-  putStrLn "-"
-  printColorsIndexes indexes colorList i 0
-finalPrint (x:xs) indexes colorList i = do
+  >> print x
+  >> putStrLn "-"
+  >> printColorsIndexes indexes colorList i 0
+finalPrint (x:xs) indexes colorList i =
   putStrLn "--"
-  print x
-  putStrLn "-"
-  printColorsIndexes indexes colorList i 0
-  finalPrint xs indexes colorList (i + 1)
+  >> print x
+  >> putStrLn "-"
+  >> printColorsIndexes indexes colorList i 0
+  >> finalPrint xs indexes colorList (i + 1)
 
 printColorsIndexes :: [Int] -> [PixelData] -> Int -> Int -> IO ()
 printColorsIndexes [] _ _ _ = return ()
-printColorsIndexes [x] colorList i j = if x == i then do
-  putStr $ show  (fst (colorList !! j))
-  putStr " "
-  print (snd (colorList !! j))
+printColorsIndexes [x] colorList i j = if x == i then
+  putStr (show (fst (colorList !! j)))
+  >> putStr " "
+  >> print (snd (colorList !! j))
   else return ()
-printColorsIndexes (x:xs) colorList i j = if x == i then do
-  putStr $ show  (fst (colorList !! j))
-  putStr " "
-  print (snd (colorList !! j))
-  printColorsIndexes xs colorList i (j + 1)
+printColorsIndexes (x:xs) colorList i j = if x == i then
+  putStr (show (fst (colorList !! j)))
+  >> putStr " "
+  >> print (snd (colorList !! j))
+  >> printColorsIndexes xs colorList i (j + 1)
   else printColorsIndexes xs colorList i (j + 1)
 
 
 main :: IO ()
 main = do
   (opts, args, errors) <- getOpt Permute options <$> getArgs
-  unless (null errors) $ do
-    exitFailure
+  unless (null errors) $ exitFailure
   let ic = foldl (flip id) (Args 0 0.0 "") opts
   str <- (readPixelDataFile (path ic))
   let pixelData = getPixelDataLines str
