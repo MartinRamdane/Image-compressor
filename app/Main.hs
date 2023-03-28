@@ -32,7 +32,7 @@ getPixelDataLines :: String -> [PixelData]
 getPixelDataLines str = map getPixelData (lines str)
 
 getPixelData :: String -> PixelData
-getPixelData str = (getPosition (take 5 str), getColor (drop 6 str))
+getPixelData str = (getPosition (head (words str)), getColor (last (words str)))
 
 getPosition :: String -> (Int, Int)
 getPosition str = read str :: (Int, Int)
@@ -103,19 +103,16 @@ averageB colorList =
 
 kMeans :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> [Int] -> Double -> [Int]
 kMeans centroids colorList indexes limit =
-  if (calculateDistanceBetweenCentroids centroids updatedCentroids) < limit
-    then indexes
-  else kMeans updatedCentroids colorList
-  (assignPointsToCentroids colorList updatedCentroids) limit
-  where updatedCentroids = updateCentroids centroids indexes colorList 0
+  let updatedCentroids = updateCentroids centroids indexes colorList 0
+      distance = calculateDistanceBetweenCentroids centroids updatedCentroids
+  in if distance < limit
+       then indexes
+       else kMeans updatedCentroids colorList (assignPointsToCentroids colorList updatedCentroids) limit
 
-calculateDistanceBetweenCentroids :: [(Int, Int, Int)] ->
-  [(Int, Int, Int)] -> Double
-calculateDistanceBetweenCentroids [] _ = 0
-calculateDistanceBetweenCentroids _ [] = 0
-calculateDistanceBetweenCentroids [x] [y] = distance x y
-calculateDistanceBetweenCentroids (x:xs) (y:ys) =
-  distance x y + calculateDistanceBetweenCentroids xs ys
+calculateDistanceBetweenCentroids :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> Double
+calculateDistanceBetweenCentroids centroids updatedCentroids =
+  sum $ map (\(c, uc) -> distance c uc) (zip centroids updatedCentroids)
+
 
 finalPrint :: [(Int, Int, Int)] -> [Int] -> [PixelData] -> Int -> IO ()
 finalPrint [] _  _ _ = return ()
