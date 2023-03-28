@@ -32,7 +32,7 @@ getPixelDataLines :: String -> [PixelData]
 getPixelDataLines str = map getPixelData (lines str)
 
 getPixelData :: String -> PixelData
-getPixelData str = (getPosition (head (words str)), getColor (last (words str)))
+getPixelData str =(getPosition (head (words str)), getColor (last (words str)))
 
 getPosition :: String -> (Int, Int)
 getPosition str = read str :: (Int, Int)
@@ -101,17 +101,28 @@ averageB [] = 0
 averageB colorList =
   div (sum (map (\(_, _, b) -> b) colorList)) (length colorList)
 
-kMeans :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> [Int] -> Double -> [Int]
+kMeans :: [(Int, Int, Int)] -> [(Int, Int, Int)] ->
+  [Int] -> Double -> [(Int, Int, Int)]
 kMeans centroids colorList indexes limit =
   let updatedCentroids = updateCentroids centroids indexes colorList 0
-      distance = calculateDistanceBetweenCentroids centroids updatedCentroids
-  in if distance < limit
-       then indexes
-       else kMeans updatedCentroids colorList (assignPointsToCentroids colorList updatedCentroids) limit
+      converge = isGood (distanceCentroids centroids updatedCentroids limit)
+  in if converge
+       then updatedCentroids
+    else kMeans updatedCentroids colorList
+    (assignPointsToCentroids colorList updatedCentroids) limit
 
-calculateDistanceBetweenCentroids :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> Double
-calculateDistanceBetweenCentroids centroids updatedCentroids =
-  sum $ map (\(c, uc) -> distance c uc) (zip centroids updatedCentroids)
+isGood :: [Bool] -> Bool
+isGood [] = True
+isGood [x] = x
+isGood (x:xs) = x && isGood xs
+
+distanceCentroids :: [(Int, Int, Int)] -> [(Int, Int, Int)] ->
+  Double -> [Bool]
+distanceCentroids [] _ _ = [True]
+distanceCentroids _ [] _ = [True]
+distanceCentroids [x] [y] limit = [distance x y < limit]
+distanceCentroids (x:xs) (y:ys) limit = (distance x y < limit)
+  : (distanceCentroids xs ys limit)
 
 
 finalPrint :: [(Int, Int, Int)] -> [Int] -> [PixelData] -> Int -> IO ()
@@ -144,16 +155,35 @@ printColorsIndexes (x:xs) colorList i j = if x == i then
   >> printColorsIndexes xs colorList i (j + 1)
   else printColorsIndexes xs colorList i (j + 1)
 
+checkColor :: (Int, Int, Int) -> IO ()
+checkColor (r, g, b) =
+  if r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255
+  then exitWith $ ExitFailure 84
+  else return ()
+
+checkColors :: [(Int, Int, Int)] -> IO ()
+checkColors [] = return ()
+checkColors [x] = checkColor x
+checkColors (x:xs) = checkColor x >> checkColors xs
+
+checkArgs :: Args -> IO ()
+checkArgs (Args colors limit path) =
+  if colors < 1 || limit < 0 || path == ""
+  then exitWith $ ExitFailure 84
+  else return ()
 
 main :: IO ()
 main = do
   (opts, args, errors) <- getOpt Permute options <$> getArgs
-  unless (null errors) $ exitFailure
+  unless (null errors) $ exitWith $ ExitFailure 84
+  checkArgs $ foldl (flip id) (Args 0 0.0 "") opts
   let ic = foldl (flip id) (Args 0 0.0 "") opts
   str <- (readPixelDataFile (path ic))
   let pixelData = getPixelDataLines str
   let colorList = getColorList pixelData
+  checkColors colorList
   let centroids = getFirstsCentroids colorList (colors ic)
   let assignedPoints = assignPointsToCentroids colorList centroids
-  let finalIndexes = kMeans centroids colorList assignedPoints (limit ic)
-  finalPrint centroids finalIndexes pixelData 0
+  let finalCentoids = kMeans centroids colorList assignedPoints (limit ic)
+  let indexes = assignPointsToCentroids colorList finalCentoids
+  finalPrint finalCentoids indexes pixelData 0
