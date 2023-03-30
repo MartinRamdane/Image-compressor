@@ -172,6 +172,15 @@ checkArgs (Args colors limit path) =
   then exitWith $ ExitFailure 84
   else return ()
 
+mainProgram :: Args -> [PixelData] -> [(Int, Int, Int)] -> IO ()
+mainProgram ic pixelData colorList = do
+  checkColors colorList
+  let centroids = getFirstsCentroids colorList (colors ic)
+  let assignedPoints = assignPointsToCentroids colorList centroids
+  let finalCentoids = kMeans centroids colorList assignedPoints (limit ic)
+  let indexes = assignPointsToCentroids colorList finalCentoids
+  finalPrint finalCentoids indexes pixelData 0
+
 main :: IO ()
 main = do
   (opts, args, errors) <- getOpt Permute options <$> getArgs
@@ -181,9 +190,4 @@ main = do
   str <- (readPixelDataFile (path ic))
   let pixelData = getPixelDataLines str
   let colorList = getColorList pixelData
-  checkColors colorList
-  let centroids = getFirstsCentroids colorList (colors ic)
-  let assignedPoints = assignPointsToCentroids colorList centroids
-  let finalCentoids = kMeans centroids colorList assignedPoints (limit ic)
-  let indexes = assignPointsToCentroids colorList finalCentoids
-  finalPrint finalCentoids indexes pixelData 0
+  mainProgram ic pixelData colorList
