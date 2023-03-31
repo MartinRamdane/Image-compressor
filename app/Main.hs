@@ -135,28 +135,20 @@ finalPrint [] _  _ _ = return ()
 finalPrint _ []  _ _ = return ()
 finalPrint _ _  [] _ = return ()
 finalPrint [x] indexes colorList i =
-  putStrLn "--"
-  >> print x
-  >> putStrLn "-"
+  putStrLn ("--\n" ++ show x ++ "\n-")
   >> printColorsIndexes indexes colorList i 0
 finalPrint (x:xs) indexes colorList i =
-  putStrLn "--"
-  >> print x
-  >> putStrLn "-"
+  putStrLn ("--\n" ++ show x ++ "\n-")
   >> printColorsIndexes indexes colorList i 0
   >> finalPrint xs indexes colorList (i + 1)
 
 printColorsIndexes :: [Int] -> [PixelData] -> Int -> Int -> IO ()
 printColorsIndexes [] _ _ _ = return ()
 printColorsIndexes [x] colorList i j = if x == i then
-  putStr (show (fst (colorList !! j)))
-  >> putStr " "
-  >> print (snd (colorList !! j))
+  putStrLn ((show (fst(colorList !! j)))++" " ++ (show (snd (colorList !! j))))
   else return ()
 printColorsIndexes (x:xs) colorList i j = if x == i then
-  putStr (show (fst (colorList !! j)))
-  >> putStr " "
-  >> print (snd (colorList !! j))
+  putStrLn ((show (fst(colorList !! j)))++" " ++ (show (snd (colorList !! j))))
   >> printColorsIndexes xs colorList i (j + 1)
   else printColorsIndexes xs colorList i (j + 1)
 
