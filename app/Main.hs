@@ -5,13 +5,13 @@
 -- imageCompressor
 -}
 
-
 import System.Exit
 import System.Console.GetOpt
 import System.Environment
 import Control.Monad
 import Data.Maybe
 import Data.List
+import System.Random (randomRIO)
 
 data Args = Args {
     colors :: Int,
@@ -46,8 +46,13 @@ readPixelDataFile file_path = readFile file_path
 getColorList :: [PixelData] -> [(Int, Int, Int)]
 getColorList pixelData = map snd pixelData
 
-getFirstsCentroids :: [(Int, Int, Int)] -> Int -> [(Int, Int, Int)]
-getFirstsCentroids colorList n = take n colorList
+getRandomCentroids :: [(Int, Int, Int)] -> Int -> IO [(Int, Int, Int)]
+getRandomCentroids colorList 0 = return []
+getRandomCentroids colorList n = do
+  index <- randomRIO (0, length colorList - 1)
+  let centroid = colorList !! index
+  rest <- getRandomCentroids colorList (n - 1)
+  return (centroid : rest)
 
 assignPointsToCentroids :: [(Int, Int, Int)] -> [(Int, Int, Int)] -> [Int]
 assignPointsToCentroids [] _ = []
@@ -175,7 +180,7 @@ checkArgs (Args colors limit path) =
 mainProgram :: Args -> [PixelData] -> [(Int, Int, Int)] -> IO ()
 mainProgram ic pixelData colorList = do
   checkColors colorList
-  let centroids = getFirstsCentroids colorList (colors ic)
+  centroids <- getRandomCentroids colorList (colors ic)
   let assignedPoints = assignPointsToCentroids colorList centroids
   let finalCentoids = kMeans centroids colorList assignedPoints (limit ic)
   let indexes = assignPointsToCentroids colorList finalCentoids
