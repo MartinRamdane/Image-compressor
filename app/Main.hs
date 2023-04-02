@@ -19,7 +19,11 @@ data Args = Args {
     path :: String
 }  deriving (Show, Eq)
 
-type PixelData = ((Int, Int), (Int, Int, Int))
+data PixelData = PixelData{pos :: (Int, Int), rgb :: (Int, Int, Int)}
+
+instance Show PixelData where
+  show(PixelData(x,y)(r,g,b)) =
+    "("++ show x++","++ show y++") ("++ show r++","++ show g++","++ show b++")"
 
 options :: [OptDescr (Args -> Args)]
 options =
@@ -32,7 +36,8 @@ getPixelDataLines :: String -> [PixelData]
 getPixelDataLines str = map getPixelData (lines str)
 
 getPixelData :: String -> PixelData
-getPixelData str =(getPosition (head (words str)), getColor (last (words str)))
+getPixelData str =
+  PixelData {pos =getPosition(head(words str)), rgb =getColor(last(words str))}
 
 getPosition :: String -> (Int, Int)
 getPosition str = read str :: (Int, Int)
@@ -44,7 +49,7 @@ readPixelDataFile :: FilePath -> IO String
 readPixelDataFile file_path = readFile file_path
 
 getColorList :: [PixelData] -> [(Int, Int, Int)]
-getColorList pixelData = map snd pixelData
+getColorList pixelData = map rgb pixelData
 
 getRandomCentroids :: [(Int, Int, Int)] -> Int -> IO [(Int, Int, Int)]
 getRandomCentroids colorList 0 = return []
@@ -136,21 +141,22 @@ finalPrint _ []  _ _ = return ()
 finalPrint _ _  [] _ = return ()
 finalPrint [x] indexes colorList i =
   putStrLn ("--\n" ++ show x ++ "\n-")
-  >> printColorsIndexes indexes colorList i 0
+  >> printColorsIndexes colorList indexes i
 finalPrint (x:xs) indexes colorList i =
   putStrLn ("--\n" ++ show x ++ "\n-")
-  >> printColorsIndexes indexes colorList i 0
+  >> printColorsIndexes colorList indexes i
   >> finalPrint xs indexes colorList (i + 1)
 
-printColorsIndexes :: [Int] -> [PixelData] -> Int -> Int -> IO ()
-printColorsIndexes [] _ _ _ = return ()
-printColorsIndexes [x] colorList i j = if x == i then
-  putStrLn ((show (fst(colorList !! j)))++" " ++ (show (snd (colorList !! j))))
+printColorsIndexes :: [PixelData] -> [Int] -> Int -> IO ()
+printColorsIndexes [] _ _  = return ()
+printColorsIndexes _ [] _  = return ()
+printColorsIndexes [x] [y] i = if y == i then
+  print x
   else return ()
-printColorsIndexes (x:xs) colorList i j = if x == i then
-  putStrLn ((show (fst(colorList !! j)))++" " ++ (show (snd (colorList !! j))))
-  >> printColorsIndexes xs colorList i (j + 1)
-  else printColorsIndexes xs colorList i (j + 1)
+printColorsIndexes (x:xs) (y:ys) i = if y == i then
+  print x
+  >> printColorsIndexes xs ys i
+  else printColorsIndexes xs ys i
 
 checkColor :: (Int, Int, Int) -> IO ()
 checkColor (r, g, b) =
